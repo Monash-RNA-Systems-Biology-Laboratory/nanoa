@@ -16,6 +16,8 @@ vignette: >
 # devtools::load_all(export_all=FALSE)
 ```
 
+## Find example files to use
+
 ```{r setup,message=FALSE,warning=FALSE}
 library(nanoa)
 library(tidyverse)
@@ -34,26 +36,28 @@ samples <- read_csv(samples_filename, col_types="ccc")
 samples
 ```
 
+## Demultiplex the reads
+
 Samples should be a data frame with three columns:
 
 * The sample name.
-* The left primer.
-* The right primer. 
+* The left adaptor.
+* The right adaptor. 
 
-In reads, we might see:
+In each read, we might see:
 
 * The left primer (forward), the sequence (forward), and then the right primer (reverse complement).
 * The right primer (forward), the sequence (reverse complement), and then the left primer (reverse complement).
 
 In the second case, the sequence is reverse complemented in the output, i.e. all output should be correctly oriented.
 
-## Demultiplex the reads
-
 ```{r}
 demultiplex(samples, read_filenames, out_dir)
 ```
 
 ## Examine results
+
+### reads.csv
 
 `reads.csv` in the output directory gives information about each demultiplexed read.
 
@@ -63,3 +67,26 @@ df
 
 count(df, sample)
 ```
+
+### ShortRead package
+
+`ShortRead` has a handy function for getting statistics on fastq files:
+
+```{r warning=FALSE,message=FALSE}
+ShortRead::countFastq(read_filenames)
+ShortRead::countFastq(out_dir, "*.fastq.gz")
+```
+
+### examine_hits function
+
+This shows alignments to a sample of reads from each file. _l and _r denote left and right adaptors. A prime indicates reverse strand. The number is the alignment score. 
+
+A cigar representation of the alignment is also shown: M=match, X=mismatch, I=insertion, D=deletion. Each letter is preceded by the number of bases involved.
+
+<div style="font-size: 50%">
+
+```{r}
+examine_hits(samples, read_filenames)
+```
+
+</div>

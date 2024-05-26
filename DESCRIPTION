@@ -1,6 +1,6 @@
 Package: nanoa
 Title: Tools for working with nanopore reads for the Beilharz Laboratory
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Paul", "Harrison", email = "paul.harrison@monash.edu", role = c("aut", "cre"), comment=c(ORCID="0000-0002-3980-268X"))
 Description: Tools for working with nanopore reads for the Beilharz Laboratory.
@@ -10,6 +10,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports: 
     tibble,
+    readr,
     dplyr,
     purrr,
     stringi,

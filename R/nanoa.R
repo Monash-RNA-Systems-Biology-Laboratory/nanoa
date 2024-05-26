@@ -68,7 +68,7 @@ run_fasta <- function(query, subject, program="ssearch36") {
     
     chunk_size <- 10000
     chunks <- split(seq_len(n), ceiling(seq_len(n)/chunk_size))
-    hits <- map_df(chunks, function(indexes) {
+    hits <- purrr::map_df(chunks, function(indexes) {
         ShortRead::writeFasta(Biostrings::DNAStringSet(subject[indexes]), subject_file)
         system(paste0(
             program," ",
@@ -83,14 +83,14 @@ run_fasta <- function(query, subject, program="ssearch36") {
     unlink(query_file)
     unlink(subject_file)
     unlink(hits_file)
-
+    
     colnames(hits) <- c("query","subject","pct_identity","length","mismatches","gaps","qstart","qend","sstart","send","evalue","bitscore", "cigar")
     
     hits$score <- purrr::map_dbl(hits$cigar, score_cigar)
-
+    
     if (int_query) hits$query <- as.integer(hits$query)
     if (int_subject) hits$subject <- as.integer(hits$subject)
-
+    
     hits
 }
 
@@ -103,7 +103,7 @@ view_read <- function(seq, qual, hits) {
         j <- i+step-1
         cat(paste0(substring(qual,i,j),"\n"))
         cat(paste0(substring(seq,i,j),"\n"))
-
+        
         for(k in seq_len(nrow(hits)))
         if (hits$sstart[k] <= j && hits$send[k] >= i) {
             a <- max(i,hits$sstart[k])
@@ -118,7 +118,7 @@ view_read <- function(seq, qual, hits) {
                 "\n"
             ))
         }
-
+        
         cat("\n")
         i <- j+1
     }
@@ -128,7 +128,43 @@ view_read <- function(seq, qual, hits) {
 view_reads <- function(reads, hits) {
     for(i in seq_len(nrow(reads))) {
         cat(paste0("\n\n\n\nRead: ",reads$name[i],"\n\nLength: ",nchar(reads$seq[i]),"\n\n\n\n"))
-        view_read(reads$seq[i], reads$qual[i], filter(hits, subject == i))
+        view_read(reads$seq[i], reads$qual[i], dplyr::filter(hits, subject == i))
+    }
+}
+
+
+#' Examine alignments to a sample of reads
+#'
+#' Sample reads from fastq files, and show where adaptor sequences align to them.
+#'
+#' @param samples A data frame with three columns. The first column is the sample name (will be used in the output filename). The second column is the left adaptor sequence. The third column is the right adaptor sequence.
+#' @param filenames A character vector of fastq read filenames.
+#' @param min_score Minimum alignment score to show.
+#' @param n_per_file Number of reads to sample per file.
+#'
+#' @export
+examine_hits <- function(samples, filenames, min_score=20, n_per_file=10) {
+    samples <- tibble::as_tibble(samples)
+    assertthat::assert_that(ncol(samples) == 3)
+    sample_names <- samples[[1]]
+    lefts <- samples[[2]]
+    rights <- samples[[3]]
+    
+    interesting <- tibble::tibble(
+        name=c(paste0(sample_names,"_l"), paste0(sample_names,"_r")),
+        seq=c(lefts, rights))
+    
+    interesting_rev <- tibble::tibble(
+        name=paste0(interesting$name,"'"), 
+        seq=rev_comp(interesting$seq))
+    
+    interesting <- dplyr::bind_rows(interesting, interesting_rev) |> tibble::deframe()
+    
+    for(filename in filenames) {
+        cat(paste0("\n\n\n\n\nReading ", filename, "\n\n\n\n\n")) 
+        reads <- read_fastq(filename) |> dplyr::slice_sample(n=n_per_file)
+        hits <- run_fasta(interesting, reads$seq)
+        view_reads(reads, dplyr::filter(hits, score>=20))
     }
 }
 
@@ -140,20 +176,20 @@ second_best <- function(vec, minimum=0) {
         minimum
 }
 
-
+# Workhorse demultiplexing function.
 # For better_by, note each mismatch decreases score by 3.
 demux <- function(reads, samples, starts, ends, min_score_start=10, min_score_end=10, better_by=6, min_length=20) {
     names(starts) <- samples
     names(ends) <- samples
     
-    reads_both_strands <- tibble(
+    reads_both_strands <- tibble::tibble(
         name = c(reads$name, reads$name),
         reverse = rep(c(FALSE, TRUE), each=nrow(reads)),
         seq = c(reads$seq, rev_comp(reads$seq)),
         quality = c(reads$qual, stringi::stri_reverse(reads$qual)))
     
     hits_start <- run_fasta(starts, reads_both_strands$seq) |>
-        transmute(
+        dplyr::transmute(
             read_row=subject, 
             start_start = sstart, 
             start_end = send, 
@@ -162,7 +198,7 @@ demux <- function(reads, samples, starts, ends, min_score_start=10, min_score_en
             sample=query)
     
     hits_end <- run_fasta(ends, reads_both_strands$seq) |>
-        transmute(
+        dplyr::transmute(
             read_row=subject, 
             end_start = sstart, 
             end_end = send, 
@@ -170,20 +206,20 @@ demux <- function(reads, samples, starts, ends, min_score_start=10, min_score_en
             end_score=score,
             sample=query)
     
-    result <- inner_join(hits_start, hits_end, by=c("read_row","sample"), relationship="many-to-many") |>
-        filter(start_end < end_start) |>
-        mutate(score = start_score + end_score) |>
-        mutate(
+    result <- dplyr::inner_join(hits_start, hits_end, by=c("read_row","sample"), relationship="many-to-many") |>
+        dplyr::filter(start_end < end_start) |>
+        dplyr::mutate(score = start_score + end_score) |>
+        dplyr::mutate(
             name=reads_both_strands$name[read_row], 
             reverse=reads_both_strands$reverse[read_row], 
             seq=reads_both_strands$seq[read_row],
             quality=reads_both_strands$quality[read_row]) |>
-        group_by(name) |>
-        filter(score >= second_best(score)+better_by) |>
-        filter(n() == 1) |>
-        ungroup() |>
-        mutate(start=start_end+1, end=end_start-1, clipped_length=end-start+1) |>
-        filter(
+        dplyr::group_by(name) |>
+        dplyr::filter(score >= second_best(score)+better_by) |>
+        dplyr::filter(dplyr::n() == 1) |>
+        dplyr::ungroup() |>
+        dplyr::mutate(start=start_end+1, end=end_start-1, clipped_length=end-start+1) |>
+        dplyr::filter(
             clipped_length >= min_length,
             start_score >= min_score_start,
             end_score >= min_score_end)
@@ -218,7 +254,7 @@ write_out <- function(out_dir, hits, samples, append=FALSE) {
     close(con)
     
     for(this_sample in samples) {
-        this_hits <- filter(hits, sample == this_sample)
+        this_hits <- dplyr::filter(hits, sample == this_sample)
         
         if (this_sample == "") 
             this_sample <- "reads"

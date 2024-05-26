@@ -21,17 +21,17 @@ demultiplex(
 
 \item{out_dir}{Directory to put output files in.}
 
+\item{min_score_left}{Minimum alignment score for the left primer.}
+
+\item{min_score_right}{Minimum alignment score for the left primer.}
+
 \item{better_by}{Total score of the best sample must be this much better than the runner-up. Note each mismatch reduces the score by three, so the default of 6 means the best sample has to have two less mismatches than the runner-up.}
 
 \item{min_length}{Only output reads containing this many bases after adaptor trimming.}
-
-\item{min_score_start}{Minimum alignment score for the left primer.}
-
-\item{min_score_end}{Minimum alignment score for the left primer.}
 }
 \description{
 Separate a set of nanopore reads into separate samples, trimmed of adaptor sequence and correctly stranded.
 }
 \details{
-For alignment scores: Each matching base scores 1. Each mismatch scores -2. Each indel scores -1+-2*length_of_indel.
+For alignment scores: Each matching base scores 1. Each mismatch scores -2. Each indel scores -1-2*length_of_indel.
 }
