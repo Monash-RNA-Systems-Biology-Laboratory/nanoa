@@ -1,0 +1,38 @@
+---
+title: "usage"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{usage}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+# devtools::load_all(export_all=FALSE)
+```
+
+```{r setup,message=FALSE,warning=FALSE}
+library(nanoa)
+library(tidyverse)
+
+samples_filename <- system.file("extdata","samples.csv", package="nanoa")
+samples_filename
+
+read_filenames <- 
+    system.file("extdata","reads", package="nanoa") |> 
+    list.files(full.names=TRUE)
+read_filenames
+
+outdir <- here::here("tmp","output")
+outdir
+
+samples <- read_csv(samples_filename, col_types="ccc")
+samples
+
+demultiplex(samples, read_filenames, outdir)
+```
