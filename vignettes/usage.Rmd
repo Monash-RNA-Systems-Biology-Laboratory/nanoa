@@ -65,7 +65,7 @@ demultiplex(samples, read_filenames, out_dir)
 df <- read_csv( file.path(out_dir,"reads.csv") )
 df
 
-count(df, sample)
+count(df, sample, reverse)
 ```
 
 ### ShortRead package
