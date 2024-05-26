@@ -1,17 +1,17 @@
 ---
-title: "usage"
+title: "Usage"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{usage}
+  %\VignetteIndexEntry{Usage}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+#knitr::opts_chunk$set(
+#  collapse = TRUE,
+#  comment = "#>"
+#)
 
 # devtools::load_all(export_all=FALSE)
 ```
@@ -23,16 +23,43 @@ library(tidyverse)
 samples_filename <- system.file("extdata","samples.csv", package="nanoa")
 samples_filename
 
-read_filenames <- 
-    system.file("extdata","reads", package="nanoa") |> 
-    list.files(full.names=TRUE)
+read_dir <- system.file("extdata","reads", package="nanoa")
+read_filenames <- list.files(read_dir, full.names=TRUE)
 read_filenames
 
-outdir <- here::here("tmp","output")
-outdir
+out_dir <- here::here("tmp","output")
+out_dir
 
 samples <- read_csv(samples_filename, col_types="ccc")
 samples
+```
 
-demultiplex(samples, read_filenames, outdir)
+Samples should be a data frame with three columns:
+
+* The sample name.
+* The left primer.
+* The right primer. 
+
+In reads, we might see:
+
+* The left primer (forward), the sequence (forward), and then the right primer (reverse complement).
+* The right primer (forward), the sequence (reverse complement), and then the left primer (reverse complement).
+
+In the second case, the sequence is reverse complemented in the output, i.e. all output should be correctly oriented.
+
+## Demultiplex the reads
+
+```{r}
+demultiplex(samples, read_filenames, out_dir)
+```
+
+## Examine results
+
+`reads.csv` in the output directory gives information about each demultiplexed read.
+
+```{r}
+df <- read_csv( file.path(out_dir,"reads.csv") )
+df
+
+count(df, sample)
 ```

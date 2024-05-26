@@ -1,0 +1,10 @@
+url: https://rnasystems.erc.monash.edu/doc/nanoa/
+template:
+  bootstrap: 5
+  params:
+    bootswatch: cerulean
+
+navbar:
+  right:
+  - icon: fa-github
+    href: https://github.com/Monash-RNA-Systems-Biology-Laboratory/nanoa

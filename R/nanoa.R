@@ -243,12 +243,24 @@ write_out <- function(out_dir, hits, samples, append=FALSE) {
 }
 
 
-#' Demultiplex nanopore reads 
+#' Demultiplex nanopore reads
+#'
+#' Separate a set of nanopore reads into separate samples, trimmed of adaptor sequence and correctly stranded.
+#'
+#' For alignment scores: Each matching base scores 1. Each mismatch scores -2. Each indel scores -1-2*length_of_indel.
+#'
+#' @param samples A data frame with three columns. The first column is the sample name (will be used in the output filename). The second column is the left adaptor sequence. The third column is the right adaptor sequence.
+#' @param filenames A character vector of fastq read filenames.
+#' @param out_dir Directory to put output files in.
+#' @param min_score_left Minimum alignment score for the left primer.
+#' @param min_score_right Minimum alignment score for the left primer.
+#' @param better_by Total score of the best sample must be this much better than the runner-up. Note each mismatch reduces the score by three, so the default of 6 means the best sample has to have two less mismatches than the runner-up.
+#' @param min_length Only output reads containing this many bases after adaptor trimming.
 #'
 #' @export
 demultiplex <- function(
-        samples, filenames, outdir, 
-        min_score_start=10, min_score_end=10, better_by=6, min_length=20) {
+        samples, filenames, out_dir, 
+        min_score_left=10, min_score_right=10, better_by=6, min_length=20) {
     samples <- tibble::as_tibble(samples)
     assertthat::assert_that(ncol(samples) == 3)
     sample_names <- samples[[1]]
@@ -263,10 +275,10 @@ demultiplex <- function(
         reads <- read_fastq(filename)
         hits <- demux(
             reads, sample_names, starts, ends,
-            min_score_start=min_score_start, min_score_end=min_score_end, 
+            min_score_start=min_score_left, min_score_end=min_score_right, 
             better_by=better_by, min_length=min_length)
         
-        write_out(outdir, hits, sample_names, append=!first)
+        write_out(out_dir, hits, sample_names, append=!first)
         first <- FALSE
     }
 }

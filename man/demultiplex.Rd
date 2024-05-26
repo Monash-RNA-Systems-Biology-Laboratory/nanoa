@@ -7,13 +7,31 @@
 demultiplex(
   samples,
   filenames,
-  outdir,
-  min_score_start = 10,
-  min_score_end = 10,
+  out_dir,
+  min_score_left = 10,
+  min_score_right = 10,
   better_by = 6,
   min_length = 20
 )
 }
+\arguments{
+\item{samples}{A data frame with three columns. The first column is the sample name (will be used in the output filename). The second column is the left adaptor sequence. The third column is the right adaptor sequence.}
+
+\item{filenames}{A character vector of fastq read filenames.}
+
+\item{out_dir}{Directory to put output files in.}
+
+\item{better_by}{Total score of the best sample must be this much better than the runner-up. Note each mismatch reduces the score by three, so the default of 6 means the best sample has to have two less mismatches than the runner-up.}
+
+\item{min_length}{Only output reads containing this many bases after adaptor trimming.}
+
+\item{min_score_start}{Minimum alignment score for the left primer.}
+
+\item{min_score_end}{Minimum alignment score for the left primer.}
+}
 \description{
-Demultiplex nanopore reads
+Separate a set of nanopore reads into separate samples, trimmed of adaptor sequence and correctly stranded.
+}
+\details{
+For alignment scores: Each matching base scores 1. Each mismatch scores -2. Each indel scores -1+-2*length_of_indel.
 }
